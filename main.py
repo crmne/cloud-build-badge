@@ -30,28 +30,33 @@ def build_badge(event, context):
     pubsub messages from Google Cloud Build.
     """
 
-    decoded = base64.b64decode(event['data']).decode('utf-8')
+    decoded = base64.b64decode(event["data"]).decode("utf-8")
     data = json.loads(decoded)
 
-    bucket = os.environ['BADGES_BUCKET']
+    bucket = os.environ["BADGES_BUCKET"]
 
     try:
-        repo = data['source']['repoSource']['repoName']
-        branch = data['source']['repoSource']['branchName']
+        repo = data["source"]["repoSource"]["repoName"]
+        branch = data["source"]["repoSource"]["branchName"]
 
-        if repo.startswith('github_') or repo.startswith('bitbucket_'):
+        if repo.startswith("github_") or repo.startswith("bitbucket_"):
             # mirrored repo format: (github|bitbucket)_<owner>_<repo>
-            repo = repo.split('_', 2)[-1]
+            repo = repo.split("_", 2)[-1]
     except KeyError:
         # github app
-        repo = data['substitutions']['REPO_NAME']
-        branch = data['substitutions']['BRANCH_NAME']
+        repo = data["substitutions"]["REPO_NAME"]
+        branch = data["substitutions"]["BRANCH_NAME"]
+        trigger = data["substitutions"]["TRIGGER_NAME"]
     finally:
-        tmpl = os.environ.get('TEMPLATE_PATH',
-                'builds/${repo}/branches/${branch}.svg')
+        if not trigger:
+            return
 
-        src = 'badges/{}.svg'.format(data['status'].lower())
-        dest = Template(tmpl).substitute(repo=repo, branch=branch)
+        tmpl = os.environ.get(
+            "TEMPLATE_PATH", "builds/${repo}/branches/${branch}/${trigger}.svg"
+        )
+
+        src = f"badges/{data['status'].lower()}.svg"
+        dest = Template(tmpl).substitute(repo=repo, branch=branch, trigger=trigger)
 
         copy_badge(bucket, src, dest)
 
