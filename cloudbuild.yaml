@@ -1,7 +1,11 @@
+---
 steps:
-  - name: 'python:3.7-slim'
+  - name: python:3.9-alpine
     id: Unit Tests
-    entrypoint: /bin/sh
+    entrypoint: sh
     args:
-    - -c
-    - 'pip install -r requirements.txt && pip install -r tests/requirements.txt && python -m pytest -W ignore::DeprecationWarning -v'
+      - -c
+      - |
+        pip install -r requirements.txt
+        pip install -r tests/requirements.txt
+        python -m pytest -W ignore::DeprecationWarning -v
