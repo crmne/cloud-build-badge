@@ -2,7 +2,7 @@
 """Create a badge SVG for testing."""
 import os
 
-from cloud_build_badge.badge_maker import BadgeMaker
+from cloud_build_badge import BadgeMaker
 
 
 def _main():

@@ -10,7 +10,6 @@ python = "^3.7"
 google-cloud-storage = "^2.3.0"
 pybadges = "^3.0.0"
 PyYAML = "^6.0"
-pydantic = "^1.9.0"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.19.0"

@@ -1,11 +1,11 @@
 """Push a badge in response to a build event"""
 import base64
+import json
 import os
+from string import Template
 
 import google.cloud
 from google.cloud import storage
-
-from cloud_build_badge.cloud_build_message import CloudBuildMessage, RepoSource
 
 DEFAULT_TEMPLATE = "builds/{repo}/branches/{branch}.svg"
 
@@ -32,12 +32,23 @@ def build_badge(event, context) -> None:
     bucket = os.environ["BADGES_BUCKET"]
 
     decoded = base64.b64decode(event["data"]).decode("utf-8")
-    message = CloudBuildMessage.parse_raw(decoded)
+    data = json.loads(decoded)
 
-    if isinstance(message.source, RepoSource):
-        src = f"badges/{message.status.lower()}.svg"
-        dest = template.format(
-            repo=message.source.repoSource.repoName,
-            branch=message.source.repoSource.branchName,
-        )
-        copy_badge(bucket, src, dest)
+    status = data["status"]
+    if "substitutions" in data:
+        substitutions = data["substitutions"]
+        if "REPO_NAME" in substitutions:
+            repo = substitutions["REPO_NAME"]
+            branch = substitutions["BRANCH_NAME"]
+        else:
+            raise NotImplementedError(f"input not recognized: {data}")
+    elif "source" in data:
+        repo_source = data["source"]["repoSource"]
+        repo = repo_source["repoName"]
+        branch = repo_source["branchName"]
+    else:
+        raise NotImplementedError(f"input not recognized: {data}")
+
+    src = f"badges/{status.lower()}.svg"
+    dest = template.format(repo=repo, branch=branch)
+    copy_badge(bucket, src, dest)
