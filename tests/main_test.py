@@ -64,7 +64,7 @@ def badges_bucket(monkeypatch):
 
 @pytest.fixture
 def custom_template_path(monkeypatch):
-    monkeypatch.setenv("TEMPLATE_PATH", "builds/${repo}-${branch}.svg")
+    monkeypatch.setenv("TEMPLATE_PATH", "builds/{repo}-{branch}.svg")
 
 
 @pytest.fixture

@@ -27,4 +27,4 @@ deploy: requirements.txt
 		--entry-point build_badge \
 		--service-account cloud-build-badge@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com \
 		--trigger-topic=cloud-builds \
-		--set-env-vars BADGES_BUCKET=${GOOGLE_CLOUD_PROJECT}-badges,TEMPLATE_PATH='builds/$\{repo}/branches/$\{branch}.svg'
+		--set-env-vars BADGES_BUCKET=${GOOGLE_CLOUD_PROJECT}-badges,TEMPLATE_PATH='builds/{repo}/branches/{branch}.svg'

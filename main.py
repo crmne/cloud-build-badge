@@ -7,9 +7,7 @@ from string import Template
 import google.cloud
 from google.cloud import storage
 
-from cloud_build_badge import BadgeMaker
-
-_DFEAULT_TEMPLATE = "builds/${repo}/branches/${branch}/${trigger}.svg"
+DEFAULT_TEMPLATE = "builds/{repo}/branches/{branch}.svg"
 
 
 def copy_badge(bucket, obj, new_obj):
@@ -30,20 +28,24 @@ def copy_badge(bucket, obj, new_obj):
 
 def build_badge(event, context) -> None:
     """Create an push a badge in response to a build event."""
+    template = os.environ.get("TEMPLATE_PATH", DEFAULT_TEMPLATE)
+    bucket = os.environ["BADGES_BUCKET"]
+
     decoded = base64.b64decode(event["data"]).decode("utf-8")
     data = json.loads(decoded)
 
-    subs = data["substitutions"]
     status = data["status"]
-    bucket = os.environ["BADGES_BUCKET"]
-    repo = subs["REPO_NAME"]
-    branch = subs["BRANCH_NAME"]
-    trigger = subs["TRIGGER_NAME"]
+    if "substitutions" in data:
+        substitutions = data["substitutions"]
+        repo = substitutions["REPO_NAME"]
+        branch = substitutions["BRANCH_NAME"]
+    elif "source" in data:
+        repo_source = data["source"]["repoSource"]
+        repo = repo_source["repoName"]
+        branch = repo_source["branchName"]
+    else:
+        raise NotImplementedError(f"input not recognized: {data}")
 
-    tmpl = os.environ.get("TEMPLATE_PATH", _DFEAULT_TEMPLATE)
-    try:
-        src = BadgeMaker.make_badge(trigger, status)
-    except KeyError:
-        src = f"badges/{status.lower()}.svg"
-    dest = Template(tmpl).substitute(repo=repo, branch=branch, trigger=trigger)
+    src = f"badges/{status.lower()}.svg"
+    dest = template.format(repo=repo, branch=branch)
     copy_badge(bucket, src, dest)
