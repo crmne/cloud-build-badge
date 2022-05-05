@@ -40,8 +40,9 @@ def build_badge(event, context) -> None:
     try:
         message = CloudBuildMessage.parse_raw(decoded)
     except ValidationError as exception:
+        print(exception)
         print(decoded)
-        raise exception
+        return
 
     src = f"badges/{message.status.lower()}.svg"
     if message.substitutions:
@@ -54,12 +55,13 @@ def build_badge(event, context) -> None:
             dest = tag_template.format(repo=message.substitutions.REPO_NAME)
         else:
             raise NotImplementedError(f"message has no branch or tag: {message}")
-    elif isinstance(message.source, RepoSource):
+    elif message.source and isinstance(message.source, RepoSource):
         dest = branch_template.format(
             repo=message.source.repoSource.repoName,
             branch=message.source.repoSource.branchName,
         )
     else:
-        raise NotImplementedError(f"no repo: {message}")
+        print(f"no repo: {message}")
+        return
 
     copy_badge(bucket, src, dest)
