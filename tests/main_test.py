@@ -78,7 +78,7 @@ def test_mirrored_repo(mirrored_repo, badges_bucket, patches):
     main.copy_badge.assert_called_once_with(
         "my-badges-bucket",
         "badges/success.svg",
-        "builds/webapp/branches/feature/fish.svg",
+        "builds/bitbucket_garman_webapp/branches/feature/fish.svg",
     )
 
 
