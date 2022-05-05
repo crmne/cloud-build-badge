@@ -4,10 +4,14 @@ import json
 import os
 from string import Template
 
+from pydantic.error_wrappers import ValidationError
 import google.cloud
 from google.cloud import storage
 
-DEFAULT_TEMPLATE = "builds/{repo}/branches/{branch}.svg"
+from cloud_build_badge.cloud_build_message import CloudBuildMessage, RepoSource
+
+BRANCH_TEMPLATE = "builds/{repo}/branches/{branch}.svg"
+TAG_TEMPLATE = "builds/{repo}.svg"
 
 
 def copy_badge(bucket, obj, new_obj):
@@ -28,27 +32,34 @@ def copy_badge(bucket, obj, new_obj):
 
 def build_badge(event, context) -> None:
     """Create an push a badge in response to a build event."""
-    template = os.environ.get("TEMPLATE_PATH", DEFAULT_TEMPLATE)
+    branch_template = os.environ.get("BRANCH_TEMPLATE_PATH", BRANCH_TEMPLATE)
+    tag_template = os.environ.get("TAG_TEMPLATE_PATH", TAG_TEMPLATE)
     bucket = os.environ["BADGES_BUCKET"]
 
     decoded = base64.b64decode(event["data"]).decode("utf-8")
-    data = json.loads(decoded)
+    try:
+        message = CloudBuildMessage.parse_raw(decoded)
+    except ValidationError as exception:
+        print(decoded)
+        raise exception
 
-    status = data["status"]
-    if "substitutions" in data:
-        substitutions = data["substitutions"]
-        if "REPO_NAME" in substitutions:
-            repo = substitutions["REPO_NAME"]
-            branch = substitutions["BRANCH_NAME"]
+    src = f"badges/{message.status.lower()}.svg"
+    if message.substitutions:
+        if message.substitutions.BRANCH_NAME:
+            dest = branch_template.format(
+                repo=message.substitutions.REPO_NAME,
+                branch=message.substitutions.BRANCH_NAME,
+            )
+        elif message.substitutions.TAG_NAME:
+            dest = tag_template.format(repo=message.substitutions.REPO_NAME)
         else:
-            raise NotImplementedError(f"input not recognized: {data}")
-    elif "source" in data:
-        repo_source = data["source"]["repoSource"]
-        repo = repo_source["repoName"]
-        branch = repo_source["branchName"]
+            raise NotImplementedError(f"message has no branch or tag: {message}")
+    elif isinstance(message.source, RepoSource):
+        dest = branch_template.format(
+            repo=message.source.repoSource.repoName,
+            branch=message.source.repoSource.branchName,
+        )
     else:
-        raise NotImplementedError(f"input not recognized: {data}")
+        raise NotImplementedError(f"no repo: {message}")
 
-    src = f"badges/{status.lower()}.svg"
-    dest = template.format(repo=repo, branch=branch)
     copy_badge(bucket, src, dest)

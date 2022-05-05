@@ -56,6 +56,18 @@ def github_app():
         },
     }
 
+@pytest.fixture
+@event
+def github_tag():
+    return {
+        "status": "SUCCESS",
+        "source": {},
+        "substitutions": {
+            "REPO_NAME": "webapp",
+            "TAG_NAME": "0.1.19",
+        },
+    }
+
 
 @pytest.fixture
 def badges_bucket(monkeypatch):
@@ -64,7 +76,7 @@ def badges_bucket(monkeypatch):
 
 @pytest.fixture
 def custom_template_path(monkeypatch):
-    monkeypatch.setenv("TEMPLATE_PATH", "builds/{repo}-{branch}.svg")
+    monkeypatch.setenv("BRANCH_TEMPLATE_PATH", "builds/{repo}-{branch}.svg")
 
 
 @pytest.fixture
@@ -89,6 +101,15 @@ def test_github_app(github_app, badges_bucket, patches):
         "my-badges-bucket",
         "badges/success.svg",
         "builds/webapp/branches/feature/fish.svg",
+    )
+
+def test_github_tag(github_tag, badges_bucket, patches):
+    main.build_badge(github_tag, None)
+
+    main.copy_badge.assert_called_once_with(
+        "my-badges-bucket",
+        "badges/success.svg",
+        "builds/webapp.svg",
     )
 
 
