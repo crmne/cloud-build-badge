@@ -37,8 +37,11 @@ def build_badge(event, context) -> None:
     status = data["status"]
     if "substitutions" in data:
         substitutions = data["substitutions"]
-        repo = substitutions["REPO_NAME"]
-        branch = substitutions["BRANCH_NAME"]
+        if "REPO_NAME" in substitutions:
+            repo = substitutions["REPO_NAME"]
+            branch = substitutions["BRANCH_NAME"]
+        else:
+            raise NotImplementedError(f"input not recognized: {data}")
     elif "source" in data:
         repo_source = data["source"]["repoSource"]
         repo = repo_source["repoName"]
