@@ -1,22 +1,30 @@
-SHELL := /bin/bash
+requirements.txt: pyproject.toml poetry.lock
+	poetry export -f requirements.txt --output requirements.txt --without-hashes
 
-export GOOGLE_CLOUD_PROJECT=software-builds
-export BADGES_BUCKET=$(GOOGLE_CLOUD_PROJECT)-badges
+.PHONY: test
+test:
+	poetry run pytest -v
 
-deploy:
-	gcloud functions deploy \
-		cloud-build-badge \
-		--project=$(GOOGLE_CLOUD_PROJECT) \
+.PHONY: setup.bucket
+setup.bucket:
+	gsutil mb gs://${GOOGLE_CLOUD_PROJECT}-badges/
+	gsutil defacl ch -u AllUsers:R gs://${GOOGLE_CLOUD_PROJECT}-badges/
+	gsutil -m -h "Cache-Control:no-cache,max-age=0" cp ./badges/*.svg gs://${GOOGLE_CLOUD_PROJECT}-badges/badges/
+
+.PHONY: setup.iam
+setup.iam:
+	gcloud iam service-accounts create cloud-build-badge
+	gsutil iam ch serviceAccount:cloud-build-badge@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com:legacyObjectReader,legacyBucketWriter gs://${GOOGLE_CLOUD_PROJECT}-badges/
+
+.PHONY: setup
+setup: setup.bucket setup.iam
+
+.PHONY: deploy
+deploy: requirements.txt
+	gcloud functions deploy cloud-build-badge \
 		--source . \
 		--runtime python39 \
 		--entry-point build_badge \
-		--service-account cloud-build-badge@$(GOOGLE_CLOUD_PROJECT).iam.gserviceaccount.com \
-		--set-env-vars BADGES_BUCKET=$(GOOGLE_CLOUD_PROJECT)-badges \
-		--trigger-topic=cloud-builds
-
-
-unit:
-	python -m pytest -W ignore::DeprecationWarning -v
-
-integration:
-	source tests/integration.sh && run_test
+		--service-account cloud-build-badge@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com \
+		--trigger-topic=cloud-builds \
+		--set-env-vars BADGES_BUCKET=${GOOGLE_CLOUD_PROJECT}-badges,TEMPLATE_PATH='builds/$\{repo}/branches/$\{branch}.svg'
