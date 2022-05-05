@@ -50,9 +50,11 @@ def mirrored_repo():
 def github_app():
     return {
         "status": "SUCCESS",
-        "substitutions": {
-            "REPO_NAME": "webapp",
-            "BRANCH_NAME": "feature/fish",
+        "source": {
+            "repoSource": {
+                "repoName": "webapp",
+                "branchName": "feature/fish",
+            }
         },
     }
 
