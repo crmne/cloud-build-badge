@@ -2,11 +2,7 @@
 import dataclasses
 import os
 from tempfile import mkstemp
-from typing import (
-    Dict,
-    Final,
-    Optional,
-)
+from typing import Dict, Final, Optional
 
 import yaml
 from pybadges import badge
