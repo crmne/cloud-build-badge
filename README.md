@@ -28,6 +28,20 @@ The function supports the following integrations:
 * Bitbucket Cloud (mirrored)
 * Cloud Source Repositories
 
+### Quickstart
+
+
+```bash
+export GOOGLE_CLOUD_PROJECT=<my-project>
+make setup deploy
+```
+
+### Develop
+
+```bash
+poetry install
+poetry run pre-commit install
+```
 
 ### Upload Badges
 
